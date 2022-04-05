@@ -194,7 +194,8 @@
                 <span class="title">Login</span>
 
                 <form action="/signin" method="POST">
-                    {% for message in messages %}
+                    {% csrf_token %}
+                   <!-- {% for message in messages %}
                     <div class ="alert alert-{{message.tags}} alert-dismissible fade show" role="alert">
                         <strong>Message:</strong>{{message}}
                         <button type="button" class ="close" data-dismisss="alert" sria-label="close">
@@ -207,9 +208,9 @@
                     <h3>hello {{name}}</h3>
                     <h4>you're successfully loggedin</h4>
                     {%else %}
-                    {% endif %}
+                    {% endif %}-->
                     <div class="input-field">
-                        <input type="email" id="email" name="emailid" placeholder="Enter your email" required>
+                        <input type="email" id="emailid" name="emailid" placeholder="Enter your email" required>
                         <i class="uil uil-envelope icon"></i>
                     </div>
                     <div class="input-field">
@@ -232,12 +233,10 @@
                     </div>
                 
                 </form>
-
-                <div class="login-signup">
-                    <span class="text">Not a member?
-                        <a href="#" class="text signup-link">Signup now</a>
-                    </span>
-                </div>
-            </div>
+                <div>
+                    {% for message in messages %}
+                    <h3>{{message}}</h3>
+                    {%endfor %}
+                </div>  
 </body>
 </html>
