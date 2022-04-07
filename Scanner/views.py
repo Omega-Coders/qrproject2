@@ -1,14 +1,21 @@
 from base64 import urlsafe_b64encode
+from urllib import request
+import webbrowser
+import cv2
+import pyzbar
+from pyzbar.pyzbar import decode
+
+
 from distutils.log import info
 #from email.message import EmailMessage
 from django.core.mail import EmailMessage
-from . tokens import generate_token
+#from . tokens import generate_token
 from django.contrib.sites.shortcuts import get_current_site
 from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render,get_object_or_404
 from django.http import HttpResponse
 from django.contrib.auth.models import User
-from .models import Student
+from .models import Attendence, Student
 from django.contrib import messages
 from django.contrib.auth import authenticate,login
 from qrcode_scanner import settings
@@ -18,6 +25,11 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.http.response import StreamingHttpResponse
 from .camera import VideoCamera
+from.tokens import account_activation_token
+from django.utils import timezone
+
+
+
 def home(request):
 
     return render(request,'Scanner/index.html')
@@ -41,7 +53,7 @@ def signup(request):
                 myuser = Student.objects.create(user_name=username,emailid=email,password =pass1)
                 myuser.is_active=False
                 #myuser1=myuser
-                #myuser.save()
+                myuser.save()
                 #return redirect('signin') 
                 #return redirect('signin')     
                     
@@ -72,7 +84,7 @@ def signup(request):
                     'name': myuser.user_name,
                     'domain': current_site.domain,
                     'uid': urlsafe_b64encode(force_bytes(myuser.pk)),
-                    'token': generate_token.make_token(myuser)
+                    'token': account_activation_token.make_token(myuser)
                 })
                 email = EmailMessage(
                 email_subject,
@@ -124,6 +136,9 @@ def signin(request):
            Student_dir[i.emailid]=i.password
            if(i.emailid==Email):
                context={'obj':i}
+               global a 
+               a= context
+               print(i.emailid)
 
         if(Email in Student_dir and Student_dir[Email]==password):
             #messages.info(request,"Successfullyloggedin")
@@ -133,38 +148,90 @@ def signin(request):
         else:
             messages.info(request,"Invalid password or Email Id")
             return redirect("signin")
+  
+
+        
 
     return render(request,'Scanner/signin.html')
     
     
 
-def signout(request):
-
-    pass
+"""def signout(request):
+    pass"""
 def activate(request,uidb64,token):
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
         myuser = Student.objects.get(pk=uid)
     except (TypeError,ValueError,OverflowError,Student.DoesNotExist):
-        myuser = None
+        myuser=Student.objects.get(pk=uid)
 
-    if myuser is not None and generate_token.check_token(myuser,token):
-        myuser.is_active = True
-        # user.profile.signup_confirmation = True
+    if myuser is not None:
+         return render(request,'Scanner/activation_failed.html')
+        
+    else:
+        #messages.info(request,myuser)
+       
+        #myuser.is_active = True
+        #user.profile.signup_confirmation = True
         myuser.save()
         login(request,myuser)
         messages.info(request, "Your Account has been activated!!")
         return redirect('signin')
-    else:
-        return render(request,'Scanner/activation_failed.html')
 # Create your views here.
 def scanner(request):
     return render(request,"Scanner/Scanner_pg1.html")
 def index(request):
-    return render(request,"Scanner/home.html")
+    return render(request, 'Scanner/home.html')
 def gen(camera):
     while True:
-        frame=camera.get_frame()
-        return frame
-def webcam_feed(request):
-    return StreamingHttpResponse(gen(VideoCamera()))
+        frame= camera.get_frame()
+        
+        s,var=camera.get().read()
+        #decodedObjects = decode(var)
+        detector = cv2.QRCodeDetector()
+    
+        
+
+        if detector is not None:
+            for code in  decode(var):
+                if code.data.decode('utf-8') not in camera.getuse():
+                    camera.getuse().append(code.data.decode('utf-8'))
+                    myuser=Attendence.objects.create(qrinfo=code.data.decode('utf-8'))
+                    myuser.save()
+                    webbrowser.open(str(code.data.decode('utf-8')))
+                    #return HttpResponse("successfully scanned")
+                    #messages.info(request,{{code.data.decode('utf-8')}})
+                else:
+                    yield(b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+        yield(b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+        """finally:
+            yield(b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')"""
+
+        
+def video_stream(request):
+    dec=cv2.QRCodeDetector()
+    return StreamingHttpResponse(gen(VideoCamera()),
+                    content_type='multipart/x-mixed-replace; boundary=frame')
+    """else:
+        return redirect("signin")"""
+def link(request,date):
+    try:
+
+        per=date[-1]
+        dat=date[0:4]+"/"+date[4:6]+"/"+date[6:8]
+        con1={'date':dat,'period':per}
+        
+        return render(request,"Scanner/link.html",{"abc":a,"b":con1,"c":con1})
+    except:
+        return HttpResponse("login first")
+    
+    
+        
+
+
+
+
+                

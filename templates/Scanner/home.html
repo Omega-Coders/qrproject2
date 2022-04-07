@@ -8,6 +8,15 @@
         <h3>
             Qr_scannig
         </h3>
-        <img src="{% url 'webcam_feed'%}">
+       <center><img src="{% url 'video_stream'%}"></center>
+       <div>
+        <label  name="abc" value="{{abc.obj.emailid}}">User Name : {{abc.obj.emailid}}</label><br>
+        <input name="username" value="{{abc.obj.emailid}}" hidden >
+       </div>
+       <div>
+        {% for message in messages %}
+        <h3>{{message}}</h3>
+        {%endfor %}
+    </div>  
     </body>
 </html>
